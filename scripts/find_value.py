@@ -49,29 +49,41 @@ def _dispatch(obj, field, value, case_sensitive, func):
         results = globals()[func](child, path, value, case_sensitive)
         for r in results:
             r['path'] = '/'.join(first, r['path'])
+        return results
     elif type(child) == list:
         if len(child) == 0:
+            # print('child 0')
             return []
         else:
+            # print('substantive child')
             path = '/'.join(rest[1:])
             if rest[0] != '?':
+                # print('not question mark')
                 i = int(rest[0])
                 results = globals()[func](child[i], path, value, case_sensitive)
+                # print ('not question mark results: {}'.format(len(results)))
                 for r in results:
                     r['path'] = '/'.join(first, r['path'])
             else:
+                # print('question mark')
                 results = []
                 for i, c in enumerate(child):
-                    rr = (globals()[func](c, path, value, case_sensitive))
+                    rr = globals()[func](c, path, value, case_sensitive)
+                    # print('quesiton mark results: {}'.format(len(results)))
                     for r in rr:
                         r['path'] = '/'.join((first, '{}'.format(i), r['path']))
+                    results.extend(rr)
+            return results
 
 
 def _contains(obj, field, value, case_sensitive, **kwargs):
+    # print('field: {}'.format(field))
     if '/' in field:
         return _dispatch(obj, field, value, case_sensitive, '_contains')
     quarry = _sensitize(obj[field], case_sensitive)
     target = _sensitize(value, case_sensitive)
+    # print('quarry: {}'.format(quarry))
+    # print('target: {}'.format(target))
     if target in quarry:
         d = {
             'path': field,
@@ -79,6 +91,7 @@ def _contains(obj, field, value, case_sensitive, **kwargs):
             'match': obj[field],
             'sensitive': case_sensitive
         }
+        # print('boom')
         return [d]
     else:
         return []
@@ -154,8 +167,9 @@ def main(**kwargs):
                             for k,v in r.items():
                                 print("\t'{}': '{}'".format(k, v))
                             print('}')
-                    else:
-                        hits.extend(results)
+                    hits.extend(results)
+            # print('hits: {}'.format(len(hits)))
+            # sys.exit(0)
     if kwargs['output'] != '':
         if len(hits) == 0:
             print('No results found.')
