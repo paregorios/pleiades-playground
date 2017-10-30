@@ -89,7 +89,13 @@ def _startswith(obj, field, value, case_sensitive, **kwargs):
     quarry = _sensitize(obj[field], case_sensitive)
     target = _sensitize(value, case_sensitive)
     if quarry.startswith(target):
-        return [obj[field]]
+        d = {
+            'path': field,
+            'value': value,
+            'match': obj[field],
+            'sensitive': case_sensitive
+        }
+        return [d]
     else:
         return []
 
@@ -99,7 +105,13 @@ def _endswith(obj, field, value, case_sensitive, **kwargs):
     quarry = _sensitize(obj[field], case_sensitive)
     target = _sensitize(value, case_sensitive)
     if quarry.endswith(target):
-        return [obj[field]]
+        d = {
+            'path': field,
+            'value': value,
+            'match': obj[field],
+            'sensitive': case_sensitive
+        }
+        return [d]
     else:
         return []
 
@@ -109,7 +121,13 @@ def _exact(obj, field, value, case_sensitive, **kwargs):
     quarry = _sensitize(obj[field], case_sensitive)
     target = _sensitize(value, case_sensitive)
     if quarry == target:
-        return [obj[field]]
+        d = {
+            'path': field,
+            'value': value,
+            'match': obj[field],
+            'sensitive': case_sensitive
+        }
+        return [d]
     else:
         return []
 
