@@ -36,7 +36,8 @@ OPTIONAL_ARGUMENTS = [
     ['-o', '--output', '', 'where to output CSV of results', False],
     ['-m', '--mode', 'contains', 'matching mode; one of : {}'.format(MODES), True],
     ['-t', '--target_value', '', 'value to match', True],
-    ['-s', '--case_sensitive', False, 'should matches be case-sensitive', False]
+    ['-s', '--case_sensitive', False, 'should matches be case-sensitive', False],
+    ['-n', '--limit', sys.maxsize, 'exit early after this many matches', False]
 
 ]
 POSITIONAL_ARGUMENTS = [
@@ -73,7 +74,7 @@ def _startswith(**kwargs):
         return []
 
 
-def _endswith(obj, field, value, case_sensitive, **kwargs):
+def _endswith(**kwargs):
     quarry, target = _sensitize(**kwargs)
     if quarry.endswith(target):
         return [kwargs['candidate']]
@@ -81,7 +82,7 @@ def _endswith(obj, field, value, case_sensitive, **kwargs):
         return []
 
 
-def _exact(obj, field, value, case_sensitive, **kwargs):
+def _equals(**kwargs):
     quarry, target = _sensitize(**kwargs)
     if quarry == target:
         return [kwargs['candidate']]
@@ -98,6 +99,7 @@ def main(**kwargs):
     jrx = parse(kwargs['jsonpath'])
     hits = {}
     files = 0
+    finish = False
     for dirpath, dirnames, filenames in walk(path):
         for filename in filenames:
             if filename.split('.')[-1] == 'json':
@@ -115,26 +117,48 @@ def main(**kwargs):
                         hits[pid].append(m)
                     except KeyError:
                         hits[pid] = [m]
-                if files % 1000 == 0:
-                    print(
-                        'Checked {} files. {} matches so far.'
-                        ''.format(files, len(hits)))
-    if kwargs['output'] != '':
-        if len(hits) == 0:
-            print('No results found.')
-        else:
+            if files % 1000 == 0:
+                print(
+                    'Checked {} files. {} matches so far.'
+                    ''.format(files, len(hits)))
+                if len(hits) >= kwargs['limit']:
+                    finish = True
+        if finish:
+            print(
+                'finishing early because limit ({}) reached: {}'
+                ''.format(kwargs['limit'], len(hits)))
+            break
+
+    if len(hits) == 0:
+        print('No results found.')
+    else:
+        results = []
+        for pid, matches in hits.items():
+            for match in matches:
+                d = {
+                    'pid': pid,
+                    'path': str(match.id_pseudopath),
+                }
+                for k, v in match.context.value.items():
+                    d[k] = v
+                results.append(d)
+        output = {
+            'parameters': {},
+            'results': results
+        }
+        for kk, kv in kwargs.items():
+            output['parameters'][kk] = kv
+        if len(kwargs['output']) > 0:
             where = abspath(realpath(kwargs['output']))
             if not(where.endswith('.json')):
                 where = join(where, 'found_values.json')
             with open (where, 'w', encoding="utf-8") as f:
-                json.dump(hits, f, indent=4, sort_keys=True, ensure_ascii=False)
-            print('wrote {} results to {}'.format(len(hits), filepath))
-    else:
-        print('{} hits'.format(len(hits)))
-        for pid, matches in hits.items():
-            for match in matches:
-                print('{}[{}]: "{}"'.format(pid, match.full_path, match.value))
-
+                json.dump(output, f, indent=4, sort_keys=True, ensure_ascii=False)
+            print('wrote {} results to {}'.format(len(hits), where))
+        else:
+            print('{} hits'.format(len(hits)))
+            for result in results:
+                pprint(result, indent=4)
 
 if __name__ == "__main__":
     main(**configure_commandline(
