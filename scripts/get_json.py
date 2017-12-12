@@ -48,7 +48,10 @@ def main(**kwargs):
            'pleiades-places-latest.json.gz')
     local_filename = url.split('/')[-1]
     path = join('data', local_filename)
-    modified = datetime.fromtimestamp(getmtime(path), timezone.utc)
+    try:
+        modified = datetime.fromtimestamp(getmtime(path), timezone.utc)
+    except FileNotFoundError:
+        modified = datetime.fromtimestamp(getmtime('COPYING'), timezone.utc)
     if modified.date() < datetime.today().date():
         r = requests.get(url, stream=True)
         with open(path, 'wb') as f:
